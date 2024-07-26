@@ -148,6 +148,7 @@ pub fn TaskCheckbox(task: RwSignal<Task>, id: u32) -> impl IntoView {
             id,
             updated_task: TaskSchema {
                 completed: Some(completed()),
+                description: Some(task().description),
                 ..Default::default()
             },
         });
