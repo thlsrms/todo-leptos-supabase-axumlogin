@@ -13,6 +13,9 @@ pub fn TaskEdit(task: RwSignal<Task>, id: u32) -> impl IntoView {
     let update_task_action = create_server_action::<TodoUpdate>();
     let title_input = RwSignal::new(String::default());
     let description_input = RwSignal::new(String::default());
+    let prefers_dark = RwSignal::new(false);
+
+    prefers_dark.set(crate::PrefersDark::check());
 
     let edit_task = move |_| {
         update_task_action.dispatch(TodoUpdate {
@@ -43,7 +46,9 @@ pub fn TaskEdit(task: RwSignal<Task>, id: u32) -> impl IntoView {
         }}
 
         <div id=&format!("edit-task_{id}") class="uk-flex-top" uk-modal>
-            <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-default uk-dark bg-toggle">
+            <div class=move || format!("uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-{0} uk-{1} bg-toggle",
+                if prefers_dark() {"secondary"} else {"default"},  if prefers_dark() {"light"} else {"dark"} )
+            >
                 <input
                     name="title"
                     type="text"
@@ -170,6 +175,9 @@ pub fn TaskCheckbox(task: RwSignal<Task>, id: u32) -> impl IntoView {
 #[island]
 pub fn TaskDelete(id: u32) -> impl IntoView {
     let tasks = expect_context::<Tasks>();
+    let prefers_dark = RwSignal::new(false);
+
+    prefers_dark.set(crate::PrefersDark::check());
 
     let delete_task = move |_| {
         create_server_action::<TodoDelete>().dispatch(TodoDelete { id });
@@ -181,7 +189,9 @@ pub fn TaskDelete(id: u32) -> impl IntoView {
 
     view! {
         <div id=&format!("confirm-delete_{id}") class="uk-flex-top" uk-modal>
-            <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-default uk-dark bg-toggle">
+            <div class=move || format!("uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-{0} uk-{1} bg-toggle",
+            if prefers_dark() {"secondary"} else {"default"},  if prefers_dark() {"light"} else {"dark"} )
+            >
                 <h4 class="uk-modal-title uk-text-center">Delete Task?</h4>
                 <p class="uk-text-center">
                     <button class="uk-button uk-button-default uk-modal-close" type="button">

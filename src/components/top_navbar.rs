@@ -1,37 +1,30 @@
 use leptos::*;
 use leptos_router::ActionForm;
 
-use crate::components::auth::provider::{check_session, CheckSession};
-
-#[island]
-pub fn TopNavBar() -> impl IntoView {
+#[component]
+pub fn TopNavBar(authenticated: bool) -> impl IntoView {
+    let toggle_dark_mode_action = create_server_action::<ToggleDarkMode>();
+    let prefers_dark = RwSignal::new(false);
     let sign_out = create_server_action::<SignOut>();
-    let session_check = create_server_action::<CheckSession>();
-    let session = create_local_resource(move || session_check.value().get(), |_| check_session());
-    let (show_if_logged_in, set_logged_in) = create_signal("none");
-    let (show_if_logged_out, set_logged_out) = create_signal("block");
+    let show_if_logged_in = RwSignal::new("none");
+    let show_if_logged_out = RwSignal::new("block");
+
+    prefers_dark.set(crate::PrefersDark::check());
+
+    if authenticated {
+        show_if_logged_in.set("block");
+        show_if_logged_out.set("none");
+    }
 
     view! {
-        <Suspense fallback=|| ()>
-            {move || {
-                if let Some(s) = session() {
-                    if s.is_ok() {
-                        set_logged_in("block");
-                        set_logged_out("none");
-                    } else {
-                        set_logged_in("none");
-                        set_logged_out("block");
-                    }
-                }
-            }}
-
-        </Suspense>
-        <div id="top-nav-bar" class="uk-position-small uk-position-top bg-toggle">
+        <div id="top-nav-bar" class="uk-position-small uk-position-top">
             <nav
                 class="uk-navbar-container uk-navbar-transparent"
                 uk-inverse="sel-active: .uk-navbar-transparent"
             >
-                <div class="uk-container">
+                <div class=move || format!("uk-container uk-background-{0} uk-{1} bg-toggle",
+            if prefers_dark() {"secondary"} else {"default"},  if prefers_dark() {"light"} else {"dark"} )
+                >
                     <div uk-navbar>
                         <div class="uk-navbar-left">
                             <a
@@ -39,6 +32,7 @@ pub fn TopNavBar() -> impl IntoView {
                                 class="uk-icon-button uk-text-warning"
                                 uk-icon="bolt"
                                 uk-toggle="target: .bg-toggle; cls: uk-background-secondary uk-light"
+                                on:click=move |_| toggle_dark_mode_action.dispatch(ToggleDarkMode {})
                             ></a>
                         </div>
                         <div class="uk-navbar-center">
@@ -136,4 +130,31 @@ async fn sign_out() -> Result<(), ServerFnError> {
             }
         },
     }
+}
+
+#[server]
+async fn toggle_dark_mode() -> Result<bool, ServerFnError> {
+    use axum_extra::extract::cookie::{Cookie, SameSite};
+    use axum_extra::extract::CookieJar;
+    use leptos_axum::ResponseOptions;
+    use time::Duration;
+
+    let res_options = expect_context::<ResponseOptions>();
+    let headers = leptos_axum::extract::<http::HeaderMap>().await?;
+    let cookies = CookieJar::from_headers(&headers);
+    let prefers_dark = cookies.get("dark_mode").is_some();
+    let mut cookie = Cookie::build("dark_mode")
+        .path("/")
+        .same_site(SameSite::Lax);
+
+    if prefers_dark {
+        cookie = cookie.max_age(Duration::seconds(-1));
+    }
+
+    res_options.insert_header(
+        http::header::SET_COOKIE,
+        cookie.build().encoded().to_string().parse().unwrap(),
+    );
+
+    Ok(!prefers_dark)
 }
