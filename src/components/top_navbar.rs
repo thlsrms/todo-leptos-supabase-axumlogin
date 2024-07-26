@@ -1,9 +1,8 @@
 use leptos::*;
 use leptos_router::ActionForm;
 
-#[island]
+#[component]
 pub fn TopNavBar(authenticated: bool) -> impl IntoView {
-    let toggle_dark_mode_action = create_server_action::<ToggleDarkMode>();
     let prefers_dark = RwSignal::new(false);
     let sign_out = create_server_action::<SignOut>();
     let show_if_logged_in = RwSignal::new("none");
@@ -27,13 +26,7 @@ pub fn TopNavBar(authenticated: bool) -> impl IntoView {
                 >
                     <div uk-navbar>
                         <div class="uk-navbar-left">
-                            <a
-                                href="#"
-                                class="uk-icon-button uk-text-warning"
-                                uk-icon="bolt"
-                                uk-toggle="target: .bg-toggle; cls: uk-background-secondary uk-light"
-                                on:click=move |_| toggle_dark_mode_action.dispatch(ToggleDarkMode {})
-                            ></a>
+                            <ToggleDarkButton/>
                         </div>
                         <div class="uk-navbar-center">
                             <a href="/" class="uk-navbar-item uk-logo">
@@ -78,6 +71,20 @@ pub fn TopNavBar(authenticated: bool) -> impl IntoView {
                 </div>
             </nav>
         </div>
+    }
+}
+
+#[island]
+fn ToggleDarkButton() -> impl IntoView {
+    let toggle_dark_mode_action = create_server_action::<ToggleDarkMode>();
+    view! {
+        <a
+            href="#"
+            class="uk-icon-button uk-text-warning"
+            uk-icon="bolt"
+            uk-toggle="target: .bg-toggle; cls: uk-background-secondary uk-light"
+            on:click=move |_| toggle_dark_mode_action.dispatch(ToggleDarkMode {})
+        ></a>
     }
 }
 
