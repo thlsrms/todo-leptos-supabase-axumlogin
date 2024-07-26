@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_router::ActionForm;
 
-#[component]
+#[island]
 pub fn TopNavBar(authenticated: bool) -> impl IntoView {
     let toggle_dark_mode_action = create_server_action::<ToggleDarkMode>();
     let prefers_dark = RwSignal::new(false);
@@ -132,7 +132,7 @@ async fn sign_out() -> Result<(), ServerFnError> {
     }
 }
 
-#[server]
+#[server(endpoint = "toggle_dark")]
 async fn toggle_dark_mode() -> Result<bool, ServerFnError> {
     use axum_extra::extract::cookie::{Cookie, SameSite};
     use axum_extra::extract::CookieJar;
