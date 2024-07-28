@@ -71,13 +71,13 @@ async fn login(email: String, password: String) -> Result<(), ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
-fn random_alphanumeric(length: usize) -> String {
-    use rand::RngCore;
+fn generate_code_verifier() -> String {
+    use rand::{Rng, RngCore};
 
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                         abcdefghijklmnopqrstuvwxyz\
-                        0123456789";
-    let mut buf = vec![0u8; length];
+                        0123456789-._~";
+    let mut buf = vec![0u8; rand::thread_rng().gen_range(43..=128)];
     rand::thread_rng().fill_bytes(&mut buf);
     let random_string: String = buf
         .iter()
@@ -95,7 +95,7 @@ async fn connect_oauth(provider: String, scopes: Vec<String>) -> Result<(), Serv
     use sha2::{Digest, Sha256};
     use supabase_rust::auth::{OAuthOptions, PKCECodeChallenge};
 
-    let code_verifier = random_alphanumeric(48);
+    let code_verifier = generate_code_verifier();
 
     // Set the cookie to verify the `auth_code` during the callback
     let cookie = Cookie::build(("pkce_flow", code_verifier.clone()))
