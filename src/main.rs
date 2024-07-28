@@ -8,7 +8,7 @@ async fn main() {
     use axum::response::{IntoResponse, Response};
     use axum::routing::get;
     use axum::{Extension, Router};
-    use axum_extra::extract::CookieJar;
+    use axum_extra::extract::{cookie::SameSite, CookieJar};
     use axum_login::tower_sessions::SessionManagerLayer;
     use axum_login::AuthManagerLayerBuilder;
     use leptos::*;
@@ -36,7 +36,9 @@ async fn main() {
 
     let auth_layer = AuthManagerLayerBuilder::new(
         supabase.as_auth_backend(),
-        SessionManagerLayer::new(supabase.as_session_store()).with_name("auth"),
+        SessionManagerLayer::new(supabase.as_session_store())
+            .with_name("auth")
+            .with_same_site(SameSite::Lax),
     )
     .build();
 

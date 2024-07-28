@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 axum = { version = "0.7", optional = true, features = ["macros"] }
 axum-login = { version = "0.15", optional = true }
 axum-extra = { version = "0.9", optional = true, features = ["cookie"] }
+base64 = { version = "0.22", optional = true }
 console_error_panic_hook = "0.1"
 futures-util = { version = "0.3", optional = true }
 leptos = { version = "0.6", features = ["nightly", "experimental-islands"] }
@@ -19,8 +20,10 @@ leptos_axum = { version = "0.6", features = [
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 pin-project-lite = { version = "0.2", optional = true }
+rand = { version = "0.8", optional = true }
 serde = { version = "1.0", features = ["derive"] }
-supabase-rust = { git = "https://github.com/thlsrms/supabase-rust_fork.git", rev = "4e99d7b47d32a859c343674ec389537d0821d980", optional = true }
+sha2 = { version = "0.10", optional = true }
+supabase-rust = { git = "https://github.com/thlsrms/supabase-rust_fork.git", rev = "c6411fc74d13f3b4e0a1db9e9dcf66da632bb0a3", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 tower = { version = "0.4", optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
@@ -61,6 +64,9 @@ ssr = [
     "dep:time",
     "dep:tower-sessions-moka-store",
     "dep:axum-extra",
+    "dep:sha2",
+    "dep:rand",
+    "dep:base64",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
