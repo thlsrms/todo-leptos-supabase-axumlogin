@@ -35,9 +35,9 @@ pub fn TasksProvider(children: Children) -> impl IntoView {
     };
 
     view! {
-        <Transition fallback=|| ()>{fetched()}</Transition>
+      <Transition fallback=|| ()>{fetched()}</Transition>
 
-        {children()}
+      {children()}
     }
 }
 
@@ -54,12 +54,11 @@ pub use ssr::*;
 #[server(prefix = "/todo", endpoint = "fetch", input = GetUrl)]
 #[middleware(compose_from_fn!(require_login))]
 async fn todo_fetch(/* filter? */) -> Result<HashMap<u32, TaskSchema>, ServerFnError> {
-    use crate::supabase::{AuthSession, Supabase, SupabaseError};
+    use crate::supabase::{AuthSession, Supabase};
     use axum::Extension;
 
     let Extension(auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
     let supabase = expect_context::<Supabase>();
-    let res_options = expect_context::<leptos_axum::ResponseOptions>();
 
     let (user_id, user_token) = {
         let user = auth_session.user.unwrap();
@@ -77,19 +76,14 @@ async fn todo_fetch(/* filter? */) -> Result<HashMap<u32, TaskSchema>, ServerFnE
         .execute()
         .await;
 
-    match supabase_rust::parse_response::<TaskSchema>(query_response).await {
-        Ok(tasks) => {
-            let map: HashMap<_, _> = if !tasks.is_empty() {
-                tasks.into_iter().map(|t| (t.id.unwrap(), t)).collect()
-            } else {
-                HashMap::new()
-            };
-            Ok(map)
-        }
-        Err(e) => {
-            let (code, err) = SupabaseError(e).into();
-            res_options.set_status(code);
-            Err(err)
-        }
-    }
+    let tasks = supabase_rust::parse_response::<TaskSchema>(query_response)
+        .await
+        .map_err(crate::supabase::map_err)?;
+
+    let map: HashMap<_, _> = if !tasks.is_empty() {
+        tasks.into_iter().map(|t| (t.id.unwrap(), t)).collect()
+    } else {
+        HashMap::new()
+    };
+    Ok(map)
 }

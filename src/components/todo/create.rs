@@ -25,70 +25,70 @@ pub fn NewTaskForm() -> impl IntoView {
     };
 
     view! {
-        <Transition fallback=|| ()>
-            {move || {
-                if let Some(Ok(t)) = new_task_action.value().get() {
-                    let task = Task {
-                        title: t.title.unwrap(),
-                        description: t.description.unwrap(),
-                        completed: t.completed.unwrap(),
-                    };
-                    tasks
-                        .signal
-                        .update(|m| {
-                            m.insert(t.id.unwrap(), RwSignal::new(task));
-                        });
-                }
-            }}
+      <Transition fallback=|| ()>
+        {move || {
+            if let Some(Ok(t)) = new_task_action.value().get() {
+                let task = Task {
+                    title: t.title.unwrap(),
+                    description: t.description.unwrap(),
+                    completed: t.completed.unwrap(),
+                };
+                tasks
+                    .signal
+                    .update(|m| {
+                        m.insert(t.id.unwrap(), RwSignal::new(task));
+                    });
+            }
+        }}
 
-        </Transition>
-        <ActionForm action=new_task_action on:submit=on_submit>
-            <NewTaskFormFields title=title description=description/>
-        </ActionForm>
+      </Transition>
+      <ActionForm action=new_task_action on:submit=on_submit>
+        <NewTaskFormFields title=title description=description/>
+      </ActionForm>
     }
 }
 
 #[component]
 pub fn NewTaskFormFields(title: RwSignal<String>, description: RwSignal<String>) -> impl IntoView {
     view! {
-        <div class="uk-grid-row-collapse uk-flex-middle" uk-grid>
-            <div class="uk-width-1-4">
-                <div class="uk-inline">
-                    <span class="uk-form-icon" uk-icon="triangle-right"></span>
-                    <input
-                        name="title"
-                        type="text"
-                        placeholder="New Task Title"
-                        aria-label="New Task Title"
-                        maxlength="60"
-                        required
-                        class="uk-input uk-form-blank"
-                        prop:value=title
-                    />
-                </div>
-            </div>
-            <div class="uk-width-large@s">
-                <div class="uk-inline uk-width-large">
-                    <span class="uk-form-icon" uk-icon="triangle-right"></span>
-                    <input
-                        name="description"
-                        type="text"
-                        placeholder="New Task Description"
-                        aria-label="New Task Description"
-                        maxlength="300"
-                        class="uk-input uk-form-blank"
-                        prop:value=description
-                    />
-                </div>
-            </div>
-            <div class="uk-width-auto@s">
-                <button
-                    type="submit"
-                    class="uk-button uk-button-small uk-text-success uk-text-bolder"
-                    uk-icon="plus-circle"
-                ></button>
-            </div>
+      <div class="uk-grid-row-collapse uk-flex-middle" uk-grid>
+        <div class="uk-width-1-4">
+          <div class="uk-inline">
+            <span class="uk-form-icon" uk-icon="triangle-right"></span>
+            <input
+              name="title"
+              type="text"
+              placeholder="New Task Title"
+              aria-label="New Task Title"
+              maxlength="60"
+              required
+              class="uk-input uk-form-blank"
+              prop:value=title
+            />
+          </div>
         </div>
+        <div class="uk-width-large@s">
+          <div class="uk-inline uk-width-large">
+            <span class="uk-form-icon" uk-icon="triangle-right"></span>
+            <input
+              name="description"
+              type="text"
+              placeholder="New Task Description"
+              aria-label="New Task Description"
+              maxlength="300"
+              class="uk-input uk-form-blank"
+              prop:value=description
+            />
+          </div>
+        </div>
+        <div class="uk-width-auto@s">
+          <button
+            type="submit"
+            class="uk-button uk-button-small uk-text-success uk-text-bolder"
+            uk-icon="plus-circle"
+          ></button>
+        </div>
+      </div>
     }
 }
 
@@ -105,12 +105,11 @@ pub use ssr::*;
 #[middleware(compose_from_fn!(require_login))]
 async fn todo_create(title: String, description: String) -> Result<TaskSchema, ServerFnError> {
     use super::TaskSchema;
-    use crate::supabase::{AuthSession, Supabase, SupabaseError};
+    use crate::supabase::{AuthSession, Supabase};
     use axum::Extension;
 
     let Extension(auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
     let supabase = expect_context::<Supabase>();
-    let res_options = expect_context::<leptos_axum::ResponseOptions>();
 
     let (user_id, user_token) = {
         let user = auth_session.user.unwrap();
@@ -135,12 +134,8 @@ async fn todo_create(title: String, description: String) -> Result<TaskSchema, S
         .execute()
         .await;
 
-    match supabase_rust::parse_response::<TaskSchema>(query_response).await {
-        Ok(new_task) => Ok(new_task[0].clone()),
-        Err(e) => {
-            let (code, err) = SupabaseError(e).into();
-            res_options.set_status(code);
-            Err(err)
-        }
-    }
+    let new_task = supabase_rust::parse_response::<TaskSchema>(query_response)
+        .await
+        .map_err(crate::supabase::map_err)?;
+    Ok(new_task[0].clone())
 }

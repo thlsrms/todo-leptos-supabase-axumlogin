@@ -48,3 +48,22 @@ impl PrefersDark {
         }
     }
 }
+
+#[cfg(feature = "ssr")]
+use axum::extract::RawQuery;
+#[cfg(feature = "ssr")]
+use std::collections::HashMap;
+
+#[cfg(feature = "ssr")]
+pub fn parse_query_string(raw_query: &RawQuery) -> HashMap<String, String> {
+    let mut params = HashMap::new();
+    if let Some(query) = &raw_query.0 {
+        for pair in query.split('&') {
+            let mut split = pair.splitn(2, '=');
+            let key = split.next().unwrap_or("").to_string();
+            let value = split.next().unwrap_or("").to_string();
+            params.insert(key, value);
+        }
+    }
+    params
+}

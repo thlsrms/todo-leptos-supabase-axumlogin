@@ -62,11 +62,16 @@ async fn main() {
     }
 
     async fn leptos_routes_handler(
-        State(app_state): State<AppState>,
+        State(AppState {
+            leptos_options,
+            supabase,
+        }): State<AppState>,
         Extension(auth_session): Extension<AuthSession>,
         uri: axum::extract::OriginalUri,
+        raw_query: axum::extract::RawQuery,
         req: Request<Body>,
     ) -> Response {
+        let raw_query = Arc::new(raw_query);
         let prefers_dark = PrefersDark(
             CookieJar::from_headers(req.headers())
                 .get("dark_mode")
@@ -74,10 +79,12 @@ async fn main() {
         );
 
         let handler = leptos_axum::render_app_to_stream_with_context(
-            app_state.leptos_options,
+            leptos_options,
             move || {
                 provide_context(auth_session.clone());
                 provide_context(uri.clone());
+                provide_context(raw_query.clone());
+                provide_context(Arc::clone(&supabase));
                 provide_context(prefers_dark.clone());
             },
             App,

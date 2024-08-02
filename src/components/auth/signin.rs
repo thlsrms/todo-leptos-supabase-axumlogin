@@ -9,25 +9,26 @@ pub fn Signin() -> impl IntoView {
     let oauth_connect_action = create_server_action::<ConnectOauth>();
 
     view! {
-        <button
-            class="uk-button uk-button-default uk-dark uk-box-shadow-small \
-            uk-margin-top uk-inline uk-text-capitalize"
-            on:click=move |_| {
-                oauth_connect_action
-                    .dispatch(ConnectOauth {
-                        provider: "discord".into(),
-                        scopes: vec!["email".into(), "identify".into()],
-                    })
-            }
-        >
-            <span uk-icon="discord" class="uk-form-icon"></span>
-            <div class="uk-margin-left">"Discord Connect"</div>
-        </button>
+      <button
+        class="uk-button uk-button-default uk-dark uk-box-shadow-small \
+        uk-margin-top uk-inline uk-text-capitalize"
+        on:click=move |_| {
+            oauth_connect_action
+                .dispatch(ConnectOauth {
+                    provider: "discord".into(),
+                    scopes: vec!["email".into(), "identify".into()],
+                })
+        }
+      >
 
-        <hr class="uk-divider-small"/>
-        <ActionForm action=login_action>
-            <AuthFormFields legend="" button=" Login "/>
-        </ActionForm>
+        <span uk-icon="discord" class="uk-form-icon"></span>
+        <div class="uk-margin-left">"Discord Connect"</div>
+      </button>
+
+      <hr class="uk-divider-small"/>
+      <ActionForm action=login_action>
+        <AuthFormFields legend="" button=" Login "/>
+      </ActionForm>
     }
 }
 
@@ -36,20 +37,11 @@ async fn login(email: String, password: String) -> Result<(), ServerFnError> {
     use crate::supabase::{AuthSession, SupabaseError};
     use axum::Extension;
 
-    let Extension(mut auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
+    let Extension(auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
     let res_options = expect_context::<leptos_axum::ResponseOptions>();
 
     match auth_session.authenticate((email, password)).await {
-        Ok(Some(user)) => {
-            if auth_session.login(&user).await.is_err() {
-                res_options.set_status(http::StatusCode::INTERNAL_SERVER_ERROR);
-                return Err(ServerFnError::ServerError(
-                    "/signin session error - 01".to_string(),
-                ));
-            }
-            leptos_axum::redirect("/");
-            Ok(())
-        }
+        Ok(Some(user)) => crate::components::auth::login(user, auth_session).await,
         Ok(None) => {
             res_options.set_status(http::StatusCode::UNAUTHORIZED);
             Err(ServerFnError::new("".to_string()))
@@ -132,7 +124,7 @@ async fn connect_oauth(provider: String, scopes: Vec<String>) -> Result<(), Serv
 
 #[server(prefix = "/auth", endpoint = "callback")]
 async fn callback_oauth() -> Result<(), ServerFnError> {
-    use crate::supabase::{AuthSession, Supabase, SupabaseError};
+    use crate::supabase::{AuthSession, Supabase};
     use axum::extract::Query;
     use axum::Extension;
     use axum_extra::extract::cookie::{Cookie, SameSite};
@@ -166,34 +158,20 @@ async fn callback_oauth() -> Result<(), ServerFnError> {
         cookie.build().encoded().to_string().parse().unwrap(),
     );
 
-    let Extension(mut auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
+    let Extension(auth_session) = leptos_axum::extract::<Extension<AuthSession>>().await?;
     let supabase = expect_context::<Supabase>();
     let Query(OAuthCode { code }) = leptos_axum::extract::<Query<OAuthCode>>().await?;
 
-    let user = match supabase
+    let access_token = supabase
         .client
         .exchange_code_for_session(&code, pkce_code_verifier)
         .await
-    {
-        Ok(access_token) => supabase.new_session(access_token).await,
-        Err(e) => Err(e),
-    };
+        .map_err(crate::supabase::map_err)?;
 
-    match user {
-        Ok(user) => {
-            if auth_session.login(&user).await.is_err() {
-                res_options.set_status(http::StatusCode::INTERNAL_SERVER_ERROR);
-                return Err(ServerFnError::ServerError(
-                    "/signup session error - 01".to_string(),
-                ));
-            }
-            leptos_axum::redirect("/");
-            Ok(())
-        }
-        Err(e) => {
-            let (code, err) = SupabaseError(e).into();
-            res_options.set_status(code);
-            Err(err)
-        }
-    }
+    let user = supabase
+        .new_session(access_token)
+        .await
+        .map_err(crate::supabase::map_err)?;
+
+    crate::components::auth::login(user, auth_session).await
 }

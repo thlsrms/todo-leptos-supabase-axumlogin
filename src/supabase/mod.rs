@@ -10,7 +10,7 @@ use tower_sessions_moka_store::MokaStore;
 use user_identity::IdentityData;
 use wrappers::{AuthWrapper, StoreWrapper};
 
-pub use error::SupabaseError;
+pub use error::{map_err, SupabaseError};
 
 pub type AuthSession = axum_login::AuthSession<AuthWrapper<SupabaseBackend>>;
 pub type Supabase = std::sync::Arc<SupabaseBackend>;
@@ -47,5 +47,9 @@ impl SupabaseBackend {
 
     pub fn as_session_store(&self) -> StoreWrapper<Self> {
         StoreWrapper(Arc::clone(&self.weak.upgrade().unwrap()))
+    }
+
+    pub fn admin_token(&self) -> &str {
+        self.service_key.as_ref()
     }
 }

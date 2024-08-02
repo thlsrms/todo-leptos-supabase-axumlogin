@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "hydrate", allow(unused))]
+
 use leptos::*;
 
 use crate::components::TopNavBar;
@@ -10,15 +12,25 @@ pub fn AuthProvider(#[prop(optional)] unprotected: bool, children: Children) -> 
     {
         use crate::supabase::AuthSession;
         use axum::extract::OriginalUri;
-        if let Some(auth_session) = use_context::<AuthSession>() {
+        let user = if let Some(auth_session) = use_context::<AuthSession>() {
             authenticated.set(auth_session.user.is_some());
+            auth_session.user
         } else {
-            authenticated.set(false);
-        }
+            None
+        };
 
         if let Some(OriginalUri(uri)) = use_context::<OriginalUri>() {
+            if let Some(u) = user {
+                if u.identity.has_mfa
+                    && u.identity.aal == "aal1"
+                    && uri.path() != "/user/authenticate"
+                {
+                    leptos_axum::redirect(&format!("/user/authenticate?cb={}", uri));
+                }
+            }
+
             if authenticated() && unprotected {
-                if uri == "/signin" || uri == "/signup" {
+                if uri.path() == "/signin" || uri.path() == "/signup" {
                     leptos_axum::redirect("/");
                 }
             } else if !authenticated() && !unprotected {
@@ -27,16 +39,8 @@ pub fn AuthProvider(#[prop(optional)] unprotected: bool, children: Children) -> 
         }
     }
 
-    let show_contents = move || {
-        if authenticated() || unprotected {
-            "block"
-        } else {
-            "none"
-        }
-    };
-
     view! {
-        <TopNavBar authenticated=authenticated() />
-        <div style:display=show_contents>{children()}</div>
+      <TopNavBar authenticated=authenticated()/>
+      {children()}
     }
 }

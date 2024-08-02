@@ -45,3 +45,9 @@ impl From<SupabaseError> for (http::StatusCode, leptos::ServerFnError) {
         )
     }
 }
+
+pub fn map_err(e: Error) -> leptos::ServerFnError {
+    let (code, err) = SupabaseError(e).into();
+    leptos::expect_context::<leptos_axum::ResponseOptions>().set_status(code);
+    err
+}

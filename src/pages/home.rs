@@ -6,15 +6,15 @@ use crate::components::todo::{NewTaskForm, TasksProvider, TasksTable};
 #[component]
 pub fn HomePage() -> impl IntoView {
     view! {
-        <AuthProvider>
+      <AuthProvider>
+        <hr class="uk-divider-small"/>
+        <section class="uk-flex uk-flex-column uk-flex-middle ">
+          <TasksProvider>
+            <NewTaskForm/>
             <hr class="uk-divider-small"/>
-            <section class="uk-flex uk-flex-column uk-flex-middle ">
-                <TasksProvider>
-                    <NewTaskForm/>
-                    <hr class="uk-divider-small"/>
-                    <TasksTable/>
-                </TasksProvider>
-            </section>
-        </AuthProvider>
+            <TasksTable/>
+          </TasksProvider>
+        </section>
+      </AuthProvider>
     }
 }

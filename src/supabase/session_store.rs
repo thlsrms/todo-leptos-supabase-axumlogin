@@ -59,6 +59,8 @@ impl SupabaseBackend {
                     last_accessed: OffsetDateTime::now_utc(),
                     user_id: access_token.user.id.clone(),
                     email: access_token.user.email.clone(),
+                    has_mfa: false,
+                    aal: claims.aal,
                 };
 
                 let user = AppUser { identity };
@@ -118,6 +120,25 @@ impl SupabaseBackend {
             return Some((session_record, true));
         }
         None
+    }
+
+    pub async fn update_assurance_level(
+        &self,
+        session_id: &str,
+        mut identity: IdentityData,
+        token: AccessToken,
+    ) {
+        let claims = self
+            .client
+            .jwt_valid(&token.access_token)
+            .await
+            .ok()
+            .unwrap();
+        identity.last_accessed = OffsetDateTime::now_utc();
+        identity.refresh_token = token.refresh_token.clone();
+        identity.auth_token = token.access_token;
+        identity.aal = claims.aal;
+        let _ = self.save(&identity.into_session_record(session_id)).await;
     }
 }
 

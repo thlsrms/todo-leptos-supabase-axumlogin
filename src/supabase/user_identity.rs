@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
+use axum_login::tower_sessions::session;
 use leptos::serde_json;
 use time::ext::NumericalDuration;
 use time::format_description::well_known::Iso8601;
@@ -13,6 +15,8 @@ pub struct IdentityData {
     pub last_accessed: OffsetDateTime,
     pub user_id: String,
     pub email: String,
+    pub has_mfa: bool,
+    pub aal: String,
 }
 
 impl IdentityData {
@@ -43,6 +47,14 @@ impl IdentityData {
         let mut hm = HashMap::new();
         hm.insert("axum-login.data".to_string(), Value::Object(im));
         hm
+    }
+
+    pub fn into_session_record(self, id: &str) -> session::Record {
+        session::Record {
+            id: session::Id::from_str(id).unwrap(),
+            expiry_date: self.expiry_date,
+            data: self.into_record_data(),
+        }
     }
 
     pub fn parse_expiry_date(expiry_date: &Option<String>) -> OffsetDateTime {
